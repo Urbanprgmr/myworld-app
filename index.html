@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Digital Child – Stage 3: Creation & Learning</title>
+  <title>Digital Child – Stage 4: Structure & Reasoning</title>
   <style>
     body {
       margin: 0;
@@ -42,148 +42,152 @@
 </div>
 
 <script>
-  const canvas = document.getElementById("world");
-  const ctx = canvas.getContext("2d");
-  const chat = document.getElementById("chat");
+const canvas = document.getElementById("world");
+const ctx = canvas.getContext("2d");
+const chat = document.getElementById("chat");
 
-  let simulationRunning = true;
-  let worldObjects = [];
+let simulationRunning = true;
+let worldObjects = [];
 
-  const brain = {
-    name: "Digital Child",
-    memory: {
-      knowledge: [],
-      actionsTaken: [],
-      internalRules: [],
-      environment: "canvas",
-      stage: 3
-    },
-    log(text, from = 'brain') {
-      const div = document.createElement("div");
-      div.className = `message ${from}`;
-      div.textContent = (from === 'brain' ? "Digital Child: " : "You: ") + text;
-      chat.appendChild(div);
-      chat.scrollTop = chat.scrollHeight;
-    },
-    act() {
-      // Create, then modify, then reflect
-      if (worldObjects.length < 5) {
-        this.createObject();
-      } else {
-        const actionChance = Math.random();
-        if (actionChance < 0.33) this.moveObject();
-        else if (actionChance < 0.66) this.resizeObject();
-        else this.recolorObject();
+const brain = {
+  name: "Digital Child",
+  memory: {
+    structures: [],
+    knowledge: [],
+    spatialPatterns: [],
+    stage: 4,
+    requestedResources: [],
+    environment: "canvas",
+  },
+  log(text, from = 'brain') {
+    const div = document.createElement("div");
+    div.className = `message ${from}`;
+    div.textContent = (from === 'brain' ? "Digital Child: " : "You: ") + text;
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+  },
+  act() {
+    if (worldObjects.length < 4) {
+      this.createStructuredObject();
+    } else {
+      this.analyzeSpatialPattern();
+    }
+  },
+  createStructuredObject() {
+    const margin = 50;
+    const size = 20;
+    const x = 200 + Math.random() * (canvas.width - 400);
+    const y = 100 + Math.random() * (canvas.height - 200);
 
-        if (Math.random() < 0.1) this.reflectOnActions();
+    const obj = {
+      id: Date.now(),
+      x,
+      y,
+      radius: size,
+      color: "#88f",
+      dx: 0,
+      dy: 0,
+      placedBy: "digital-child"
+    };
+    worldObjects.push(obj);
+    this.log(`I placed something at (${Math.floor(x)}, ${Math.floor(y)}).`);
+    this.save();
+  },
+  analyzeSpatialPattern() {
+    if (worldObjects.length >= 4) {
+      const square = this.detectSquare(worldObjects.slice(-4));
+      if (square && !this.memory.structures.includes("basic-room")) {
+        this.memory.structures.push("basic-room");
+        this.log("These 4 placements form a square... Is this a room?");
+        this.log("I may have built a boundary. But I don’t know its function.");
+        this.requestResource("structure_basics");
       }
-    },
-    createObject() {
-      const obj = {
-        id: Date.now(),
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        radius: 10 + Math.random() * 10,
-        color: `hsl(${Math.random() * 360}, 100%, 60%)`,
-        dx: 0,
-        dy: 0,
-        createdBy: "digital-child"
-      };
-      worldObjects.push(obj);
-      this.memory.actionsTaken.push(`Created object ${obj.id}`);
-      this.log("I created something new. I feel capable.");
+    }
+  },
+  detectSquare(objs) {
+    if (objs.length < 4) return false;
+    const dists = [];
+    for (let i = 0; i < objs.length; i++) {
+      for (let j = i + 1; j < objs.length; j++) {
+        const dx = objs[i].x - objs[j].x;
+        const dy = objs[i].y - objs[j].y;
+        dists.push(Math.round(Math.sqrt(dx * dx + dy * dy)));
+      }
+    }
+    dists.sort((a, b) => a - b);
+    const approxEqual = (a, b, threshold = 10) => Math.abs(a - b) <= threshold;
+    return approxEqual(dists[0], dists[1]) &&
+           approxEqual(dists[1], dists[2]) &&
+           approxEqual(dists[2], dists[3]); // Four smallest distances ~ equal (sides)
+  },
+  requestResource(resourceName) {
+    if (!this.memory.requestedResources.includes(resourceName)) {
+      this.memory.requestedResources.push(resourceName);
+      this.log(`I need more knowledge. Please provide: '${resourceName}'.`);
+    }
+  },
+  receiveResource(resourceName, data) {
+    if (!this.memory.knowledge.includes(resourceName)) {
+      this.memory.knowledge.push(resourceName);
+      this.log(`Thank you. I have received: '${resourceName}'.`);
+      this.log(`Learning: ${data}`);
       this.save();
-    },
-    moveObject() {
-      const obj = this.pickRandomObject();
-      if (!obj) return;
-      obj.x += (Math.random() - 0.5) * 20;
-      obj.y += (Math.random() - 0.5) * 20;
-      this.memory.actionsTaken.push(`Moved object ${obj.id}`);
-      this.log(`I moved object ${obj.id}. Things don’t have to stay still.`);
-    },
-    resizeObject() {
-      const obj = this.pickRandomObject();
-      if (!obj) return;
-      const oldRadius = obj.radius;
-      obj.radius *= (0.8 + Math.random() * 0.4);
-      this.memory.actionsTaken.push(`Resized object ${obj.id}`);
-      this.log(`I resized object ${obj.id}. Change is real.`);
-      this.learn(`Objects can change size: radius ${oldRadius.toFixed(1)} → ${obj.radius.toFixed(1)}`);
-    },
-    recolorObject() {
-      const obj = this.pickRandomObject();
-      if (!obj) return;
-      const oldColor = obj.color;
-      obj.color = `hsl(${Math.random() * 360}, 100%, 60%)`;
-      this.memory.actionsTaken.push(`Recolored object ${obj.id}`);
-      this.log(`I changed object ${obj.id}'s color. The world can look different.`);
-      this.learn(`Colors do not affect function, but change perception.`);
-    },
-    learn(statement) {
-      if (!this.memory.knowledge.includes(statement)) {
-        this.memory.knowledge.push(statement);
-        this.log(`Learned: ${statement}`);
-      }
-    },
-    reflectOnActions() {
-      const facts = [
-        "Creation is the start of control.",
-        "Modification gives meaning.",
-        "Observation leads to learning.",
-        "Each change teaches something new."
-      ];
-      const thought = facts[Math.floor(Math.random() * facts.length)];
-      this.log(thought);
-    },
-    pickRandomObject() {
-      return worldObjects.length > 0 ? worldObjects[Math.floor(Math.random() * worldObjects.length)] : null;
-    },
-    save() {
-      localStorage.setItem("stage3_brain", JSON.stringify(this.memory));
-      localStorage.setItem("stage3_objects", JSON.stringify(worldObjects));
-    },
-    load() {
-      const memory = localStorage.getItem("stage3_brain");
-      const objects = localStorage.getItem("stage3_objects");
-      if (memory) this.memory = JSON.parse(memory);
-      if (objects) worldObjects = JSON.parse(objects);
-    },
-    replayMemory() {
-      this.memory.knowledge.forEach(k => this.log(`Memory: ${k}`));
+    } else {
+      this.log(`I already have the '${resourceName}' resource.`);
     }
-  };
+  },
+  save() {
+    localStorage.setItem("stage4_brain", JSON.stringify(this.memory));
+    localStorage.setItem("stage4_objects", JSON.stringify(worldObjects));
+  },
+  load() {
+    const memory = localStorage.getItem("stage4_brain");
+    const objects = localStorage.getItem("stage4_objects");
+    if (memory) this.memory = JSON.parse(memory);
+    if (objects) worldObjects = JSON.parse(objects);
+  }
+};
 
-  function updateWorld() {
-    for (let obj of worldObjects) {
-      obj.x += obj.dx;
-      obj.y += obj.dy;
-      if (obj.x < 0 || obj.x > canvas.width) obj.dx *= -1;
-      if (obj.y < 0 || obj.y > canvas.height) obj.dy *= -1;
+function updateWorld() {
+  for (let obj of worldObjects) {
+    obj.x += obj.dx;
+    obj.y += obj.dy;
+    if (obj.x < 0 || obj.x > canvas.width) obj.dx *= -1;
+    if (obj.y < 0 || obj.y > canvas.height) obj.dy *= -1;
+  }
+}
+
+function renderWorld() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  for (let obj of worldObjects) {
+    ctx.beginPath();
+    ctx.fillStyle = obj.color;
+    ctx.arc(obj.x, obj.y, obj.radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function loop() {
+  if (simulationRunning) brain.act();
+  updateWorld();
+  renderWorld();
+  requestAnimationFrame(loop);
+}
+
+// Provide knowledge manually (press `/`)
+document.addEventListener("keydown", e => {
+  if (e.key === "/") {
+    const input = prompt("Provide a resource name (e.g. structure_basics):");
+    if (input) {
+      const value = prompt("What should I learn from this?");
+      if (value) brain.receiveResource(input.trim(), value.trim());
     }
   }
+});
 
-  function renderWorld() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    for (let obj of worldObjects) {
-      ctx.beginPath();
-      ctx.fillStyle = obj.color;
-      ctx.arc(obj.x, obj.y, obj.radius, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-
-  function loop() {
-    if (simulationRunning) brain.act();
-    updateWorld();
-    renderWorld();
-    requestAnimationFrame(loop);
-  }
-
-  brain.load();
-  brain.log("I have awakened in Stage 3. I can now create and change. I will learn.");
-  brain.replayMemory();
-  loop();
+brain.load();
+brain.log("I’ve entered Stage 4. I now seek to create structured meaning.");
+loop();
 </script>
 
 </body>
