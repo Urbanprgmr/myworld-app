@@ -4,6 +4,15 @@
   <meta charset="UTF-8">
   <title>Digital Child – Stage 4.1 (Fixed)</title>
   <style>
+    <button onclick="resetSimulation()" style="background:#c00;color:#fff;padding:10px;margin:10px;">Reset Simulation</button>
+<script>
+function resetSimulation() {
+  localStorage.removeItem("stage4_brain");
+  localStorage.removeItem("stage4_objects");
+  alert("Simulation reset. Reloading...");
+  location.reload();
+}
+</script>
     body { margin: 0; background: #111; color: #eee; font-family: monospace; }
     canvas { background: #000; display: block; margin: 0 auto; }
     #ui { background: #1a1a1a; padding: 10px; }
