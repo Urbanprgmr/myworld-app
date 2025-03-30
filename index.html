@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Self-Growing Simulation</title>
+  <title>Self-Growing Simulation + World Brain</title>
   <style>
     body {
       margin: 0;
@@ -20,6 +20,14 @@
       text-align: center;
       background: #1c1c1c;
     }
+    #worldLog {
+      padding: 10px;
+      background: #0a0a0a;
+      height: 150px;
+      overflow-y: auto;
+      font-size: 14px;
+      border-top: 1px solid #333;
+    }
     .action-button {
       background: #333;
       border: 1px solid #666;
@@ -34,21 +42,60 @@
 
 <canvas id="world" width="800" height="400"></canvas>
 <div id="controls">
-  <button class="action-button" onclick="toggleSimulation()">
-    Start Simulation
-  </button>
+  <button class="action-button" onclick="toggleSimulation()">Start Simulation</button>
 </div>
+<div id="worldLog"></div>
 
 <script>
   const canvas = document.getElementById('world');
   const ctx = canvas.getContext('2d');
   const controls = document.getElementById('controls');
+  const worldLog = document.getElementById('worldLog');
 
   let objects = [];
   let mechanics = [];
   let simulationRunning = false;
 
-  // Restore from localStorage if exists
+  const worldBrain = {
+    memory: [],
+    observed: [],
+    thoughts: [],
+    log: (msg) => {
+      const p = document.createElement('div');
+      p.textContent = `World Brain: ${msg}`;
+      worldLog.appendChild(p);
+      worldLog.scrollTop = worldLog.scrollHeight;
+      worldBrain.memory.push(msg);
+    },
+    think: () => {
+      // Simple awareness triggers
+      if (objects.length >= 10 && !worldBrain.observed.includes('lotsOfObjects')) {
+        worldBrain.observed.push('lotsOfObjects');
+        worldBrain.log("There are many entities now... Something is growing.");
+      }
+
+      if (mechanics.length >= 3 && !worldBrain.observed.includes('mechanicMastery')) {
+        worldBrain.observed.push('mechanicMastery');
+        worldBrain.log("The world is learning how to change itself.");
+      }
+
+      // Suggest unknown logic
+      if (mechanics.length > 0 && Math.random() < 0.05) {
+        const ideas = ["Time loop?", "Magnetism?", "Trade system?", "Tool crafting?", "AI intelligence?"];
+        const idea = ideas[Math.floor(Math.random() * ideas.length)];
+        worldBrain.log("Thinking... What if: " + idea);
+      }
+
+      // Log repeating mechanic usage
+      if (Math.random() < 0.05) {
+        const used = mechanics[Math.floor(Math.random() * mechanics.length)];
+        if (used) {
+          worldBrain.log(`Mechanic '${used.type}' is being observed frequently...`);
+        }
+      }
+    }
+  };
+
   function loadState() {
     const savedObjects = localStorage.getItem('sim_objects');
     const savedMechanics = localStorage.getItem('sim_mechanics');
@@ -64,7 +111,6 @@
     localStorage.setItem('sim_mechanics', JSON.stringify(mechanics));
   }
 
-  // Create random object
   function spawnObject() {
     const obj = {
       id: Date.now() + Math.floor(Math.random() * 1000),
@@ -79,7 +125,6 @@
     saveState();
   }
 
-  // Try to discover a new mechanic
   function tryNewMechanic() {
     const types = ['grow', 'bounce', 'changeColor'];
     const chosen = types[Math.floor(Math.random() * types.length)];
@@ -90,6 +135,7 @@
     mechanics.push(newMech);
     saveState();
     addButtonFromMechanic(newMech);
+    worldBrain.log(`A new mechanic has emerged: '${newMech.type}'`);
   }
 
   function addButtonFromMechanic(mech) {
@@ -100,7 +146,6 @@
     controls.appendChild(btn);
   }
 
-  // What each mechanic does
   function applyMechanic(type) {
     switch (type) {
       case 'grow':
@@ -119,14 +164,13 @@
         break;
     }
     saveState();
+    worldBrain.log(`The '${type}' mechanic was just applied.`);
   }
 
   function update() {
     objects.forEach(obj => {
       obj.x += obj.dx;
       obj.y += obj.dy;
-
-      // Bounce off walls
       if (obj.x < 0 || obj.x > canvas.width) obj.dx *= -1;
       if (obj.y < 0 || obj.y > canvas.height) obj.dy *= -1;
     });
@@ -146,6 +190,7 @@
     if (simulationRunning) {
       if (Math.random() < 0.02) spawnObject();
       if (Math.random() < 0.01) tryNewMechanic();
+      if (Math.random() < 0.02) worldBrain.think();
     }
     update();
     render();
@@ -157,6 +202,7 @@
     const btn = controls.querySelector('button');
     btn.textContent = simulationRunning ? "Stop Simulation" : "Start Simulation";
     saveState();
+    worldBrain.log(simulationRunning ? "Simulation resumed." : "Simulation paused.");
   }
 
   loadState();
