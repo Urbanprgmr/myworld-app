@@ -2,17 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Digital Child – Stage 4.1 (Fixed)</title>
+  <title>Digital Child – Stage 4.1</title>
   <style>
-    <button onclick="resetSimulation()" style="background:#c00;color:#fff;padding:10px;margin:10px;">Reset Simulation</button>
-<script>
-function resetSimulation() {
-  localStorage.removeItem("stage4_brain");
-  localStorage.removeItem("stage4_objects");
-  alert("Simulation reset. Reloading...");
-  location.reload();
-}
-</script>
     body { margin: 0; background: #111; color: #eee; font-family: monospace; }
     canvas { background: #000; display: block; margin: 0 auto; }
     #ui { background: #1a1a1a; padding: 10px; }
@@ -24,12 +15,25 @@ function resetSimulation() {
     .message { margin-bottom: 8px; }
     .brain { color: #66ff66; }
     .user { color: #33ccff; }
+    #resetBtn {
+      margin: 10px auto;
+      padding: 10px 20px;
+      background: #c00;
+      color: white;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+      display: block;
+    }
   </style>
 </head>
 <body>
 
 <canvas id="world" width="800" height="400"></canvas>
-<div id="ui"><div id="chat"></div></div>
+<div id="ui">
+  <div id="chat"></div>
+  <button id="resetBtn" onclick="resetSimulation()">Reset Simulation</button>
+</div>
 
 <script>
 const canvas = document.getElementById("world");
@@ -45,7 +49,7 @@ const brain = {
     knowledge: [],
     requestedResources: [],
     environment: "canvas",
-    buildCooldown: 300,  // build every ~5 seconds
+    buildCooldown: 300,
     lastBuildFrame: 0,
     buildCount: 0
   },
@@ -157,14 +161,22 @@ function loop() {
   requestAnimationFrame(loop);
 }
 
-// Manual knowledge input
+// Manual teaching
 document.addEventListener("keydown", e => {
   if (e.key === "/") {
-    const name = prompt("Resource name (e.g. structure_basics):");
-    const info = prompt("What is the child learning?");
-    if (name && info) brain.receiveResource(name.trim(), info.trim());
+    const resource = prompt("Resource name (e.g. structure_basics):");
+    const info = prompt("What should the child learn?");
+    if (resource && info) brain.receiveResource(resource.trim(), info.trim());
   }
 });
+
+// Reset button logic
+function resetSimulation() {
+  localStorage.removeItem("stage4_brain");
+  localStorage.removeItem("stage4_objects");
+  alert("Simulation reset. Reloading...");
+  location.reload();
+}
 
 brain.load();
 brain.log("I’m alive in Stage 4.1. I will keep building and thinking.");
