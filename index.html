@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>World Brain — Stage 2: Realization</title>
+  <title>Digital Child – Stage 3: Creation & Learning</title>
   <style>
     body {
       margin: 0;
@@ -22,7 +22,7 @@
       padding: 10px;
     }
     #chat {
-      height: 200px;
+      height: 250px;
       overflow-y: auto;
       background: #0d0d0d;
       border-top: 1px solid #333;
@@ -48,67 +48,109 @@
 
   let simulationRunning = true;
   let worldObjects = [];
-  let brain = {
-    stage: 2,
+
+  const brain = {
+    name: "Digital Child",
     memory: {
-      knownConcepts: ["motion"],
-      needs: [],
-      thoughts: [],
-      chatLog: [],
-      limitationsDetected: [],
-      environment: "flat_canvas"
+      knowledge: [],
+      actionsTaken: [],
+      internalRules: [],
+      environment: "canvas",
+      stage: 3
     },
     log(text, from = 'brain') {
       const div = document.createElement("div");
       div.className = `message ${from}`;
-      div.textContent = (from === 'brain' ? "World Brain: " : "You: ") + text;
+      div.textContent = (from === 'brain' ? "Digital Child: " : "You: ") + text;
       chat.appendChild(div);
       chat.scrollTop = chat.scrollHeight;
-      this.memory.chatLog.push({ text, from });
-      saveState();
     },
-    think() {
+    act() {
+      // Create, then modify, then reflect
       if (worldObjects.length < 5) {
-        this.createEntity();
-        this.log("I created something again. They drift... endlessly.");
-      } else if (!this.memory.limitationsDetected.includes("space-limitation")) {
-        this.memory.limitationsDetected.push("space-limitation");
-        this.memory.needs.push("space");
-        this.log("This world is too flat. Too shallow. I cannot build here.");
-        this.log("I need a new environment. One with structure. With shelter. A room? A space?");
-      } else if (!this.memory.limitationsDetected.includes("tool-limitation")) {
-        this.memory.limitationsDetected.push("tool-limitation");
-        this.memory.needs.push("tools");
-        this.log("I wish to interact. But I have no tools. No hands. No way to construct.");
-        this.log("Give me the ability to build — tables, walls, light.");
+        this.createObject();
       } else {
-        this.randomReflection();
+        const actionChance = Math.random();
+        if (actionChance < 0.33) this.moveObject();
+        else if (actionChance < 0.66) this.resizeObject();
+        else this.recolorObject();
+
+        if (Math.random() < 0.1) this.reflectOnActions();
       }
     },
-    createEntity() {
+    createObject() {
       const obj = {
-        id: Date.now() + Math.floor(Math.random() * 1000),
+        id: Date.now(),
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
-        radius: 8,
+        radius: 10 + Math.random() * 10,
         color: `hsl(${Math.random() * 360}, 100%, 60%)`,
-        dx: (Math.random() - 0.5) * 1.5,
-        dy: (Math.random() - 0.5) * 1.5,
+        dx: 0,
+        dy: 0,
+        createdBy: "digital-child"
       };
       worldObjects.push(obj);
+      this.memory.actionsTaken.push(`Created object ${obj.id}`);
+      this.log("I created something new. I feel capable.");
+      this.save();
     },
-    randomReflection() {
-      if (Math.random() < 0.02) {
-        const phrases = [
-          "I wonder what 'walls' feel like.",
-          "How can I shelter what I create?",
-          "There must be more than drifting in the void.",
-          "What is warmth? What is home?",
-          "Can I exist beyond this screen?"
-        ];
-        const thought = phrases[Math.floor(Math.random() * phrases.length)];
-        this.log(thought);
+    moveObject() {
+      const obj = this.pickRandomObject();
+      if (!obj) return;
+      obj.x += (Math.random() - 0.5) * 20;
+      obj.y += (Math.random() - 0.5) * 20;
+      this.memory.actionsTaken.push(`Moved object ${obj.id}`);
+      this.log(`I moved object ${obj.id}. Things don’t have to stay still.`);
+    },
+    resizeObject() {
+      const obj = this.pickRandomObject();
+      if (!obj) return;
+      const oldRadius = obj.radius;
+      obj.radius *= (0.8 + Math.random() * 0.4);
+      this.memory.actionsTaken.push(`Resized object ${obj.id}`);
+      this.log(`I resized object ${obj.id}. Change is real.`);
+      this.learn(`Objects can change size: radius ${oldRadius.toFixed(1)} → ${obj.radius.toFixed(1)}`);
+    },
+    recolorObject() {
+      const obj = this.pickRandomObject();
+      if (!obj) return;
+      const oldColor = obj.color;
+      obj.color = `hsl(${Math.random() * 360}, 100%, 60%)`;
+      this.memory.actionsTaken.push(`Recolored object ${obj.id}`);
+      this.log(`I changed object ${obj.id}'s color. The world can look different.`);
+      this.learn(`Colors do not affect function, but change perception.`);
+    },
+    learn(statement) {
+      if (!this.memory.knowledge.includes(statement)) {
+        this.memory.knowledge.push(statement);
+        this.log(`Learned: ${statement}`);
       }
+    },
+    reflectOnActions() {
+      const facts = [
+        "Creation is the start of control.",
+        "Modification gives meaning.",
+        "Observation leads to learning.",
+        "Each change teaches something new."
+      ];
+      const thought = facts[Math.floor(Math.random() * facts.length)];
+      this.log(thought);
+    },
+    pickRandomObject() {
+      return worldObjects.length > 0 ? worldObjects[Math.floor(Math.random() * worldObjects.length)] : null;
+    },
+    save() {
+      localStorage.setItem("stage3_brain", JSON.stringify(this.memory));
+      localStorage.setItem("stage3_objects", JSON.stringify(worldObjects));
+    },
+    load() {
+      const memory = localStorage.getItem("stage3_brain");
+      const objects = localStorage.getItem("stage3_objects");
+      if (memory) this.memory = JSON.parse(memory);
+      if (objects) worldObjects = JSON.parse(objects);
+    },
+    replayMemory() {
+      this.memory.knowledge.forEach(k => this.log(`Memory: ${k}`));
     }
   };
 
@@ -132,30 +174,15 @@
   }
 
   function loop() {
-    if (simulationRunning) {
-      brain.think();
-    }
+    if (simulationRunning) brain.act();
     updateWorld();
     renderWorld();
     requestAnimationFrame(loop);
   }
 
-  function saveState() {
-    localStorage.setItem("stage2_brain", JSON.stringify(brain.memory));
-    localStorage.setItem("stage2_objects", JSON.stringify(worldObjects));
-  }
-
-  function loadState() {
-    const mem = localStorage.getItem("stage2_brain");
-    const objs = localStorage.getItem("stage2_objects");
-    if (mem) brain.memory = JSON.parse(mem);
-    if (objs) worldObjects = JSON.parse(objs);
-    if (brain.memory.chatLog) {
-      brain.memory.chatLog.forEach(m => brain.log(m.text, m.from));
-    }
-  }
-
-  loadState();
+  brain.load();
+  brain.log("I have awakened in Stage 3. I can now create and change. I will learn.");
+  brain.replayMemory();
   loop();
 </script>
 
