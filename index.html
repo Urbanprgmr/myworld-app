@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Digital Child – Stage 4: Structure & Reasoning</title>
+  <title>Digital Child – Stage 4.1: Ongoing Curiosity</title>
   <style>
     body {
       margin: 0;
@@ -58,6 +58,9 @@ const brain = {
     stage: 4,
     requestedResources: [],
     environment: "canvas",
+    lastBuildTime: 0,
+    buildCooldown: 100, // frames between structure attempts
+    buildCount: 0
   },
   log(text, from = 'brain') {
     const div = document.createElement("div");
@@ -66,43 +69,50 @@ const brain = {
     chat.appendChild(div);
     chat.scrollTop = chat.scrollHeight;
   },
-  act() {
-    if (worldObjects.length < 4) {
-      this.createStructuredObject();
-    } else {
-      this.analyzeSpatialPattern();
+  act(frameCount) {
+    if (frameCount - this.memory.lastBuildTime > this.memory.buildCooldown) {
+      this.memory.lastBuildTime = frameCount;
+      this.buildStructurePattern();
     }
+    if (Math.random() < 0.01) this.randomReflection();
   },
-  createStructuredObject() {
-    const margin = 50;
-    const size = 20;
-    const x = 200 + Math.random() * (canvas.width - 400);
-    const y = 100 + Math.random() * (canvas.height - 200);
+  buildStructurePattern() {
+    const cx = 200 + Math.random() * 400;
+    const cy = 100 + Math.random() * 200;
+    const spacing = 60;
+    const objSet = [];
 
-    const obj = {
-      id: Date.now(),
-      x,
-      y,
-      radius: size,
-      color: "#88f",
-      dx: 0,
-      dy: 0,
-      placedBy: "digital-child"
-    };
-    worldObjects.push(obj);
-    this.log(`I placed something at (${Math.floor(x)}, ${Math.floor(y)}).`);
-    this.save();
-  },
-  analyzeSpatialPattern() {
-    if (worldObjects.length >= 4) {
-      const square = this.detectSquare(worldObjects.slice(-4));
-      if (square && !this.memory.structures.includes("basic-room")) {
-        this.memory.structures.push("basic-room");
-        this.log("These 4 placements form a square... Is this a room?");
-        this.log("I may have built a boundary. But I don’t know its function.");
+    for (let i = 0; i < 4; i++) {
+      const angle = (Math.PI / 2) * i;
+      const x = cx + spacing * Math.cos(angle);
+      const y = cy + spacing * Math.sin(angle);
+      const obj = {
+        id: Date.now() + Math.floor(Math.random() * 1000),
+        x, y,
+        radius: 15,
+        color: "#88f",
+        dx: 0, dy: 0,
+        placedBy: "digital-child"
+      };
+      worldObjects.push(obj);
+      objSet.push(obj);
+    }
+
+    this.memory.buildCount++;
+    this.log(`I placed 4 more objects. Trying new structure ${this.memory.buildCount}.`);
+
+    const square = this.detectSquare(objSet);
+    if (square) {
+      const label = "room-" + this.memory.buildCount;
+      this.memory.structures.push(label);
+      this.log(`This arrangement looks like a room. I call it '${label}'.`);
+      if (!this.memory.knowledge.includes("structure_basics")) {
         this.requestResource("structure_basics");
+      } else {
+        this.log("I have structure knowledge. Maybe I can build differently.");
       }
     }
+    this.save();
   },
   detectSquare(objs) {
     if (objs.length < 4) return false;
@@ -115,10 +125,10 @@ const brain = {
       }
     }
     dists.sort((a, b) => a - b);
-    const approxEqual = (a, b, threshold = 10) => Math.abs(a - b) <= threshold;
+    const approxEqual = (a, b, t = 10) => Math.abs(a - b) <= t;
     return approxEqual(dists[0], dists[1]) &&
            approxEqual(dists[1], dists[2]) &&
-           approxEqual(dists[2], dists[3]); // Four smallest distances ~ equal (sides)
+           approxEqual(dists[2], dists[3]);
   },
   requestResource(resourceName) {
     if (!this.memory.requestedResources.includes(resourceName)) {
@@ -129,12 +139,22 @@ const brain = {
   receiveResource(resourceName, data) {
     if (!this.memory.knowledge.includes(resourceName)) {
       this.memory.knowledge.push(resourceName);
-      this.log(`Thank you. I have received: '${resourceName}'.`);
+      this.log(`Thank you. I have received '${resourceName}'.`);
       this.log(`Learning: ${data}`);
       this.save();
     } else {
-      this.log(`I already have the '${resourceName}' resource.`);
+      this.log(`I already understand '${resourceName}'.`);
     }
+  },
+  randomReflection() {
+    const thoughts = [
+      "Is a structure only useful if it serves a purpose?",
+      "What does it mean to protect something?",
+      "Can I define space with meaning?",
+      "Should I try to make something inside the room?",
+      "Maybe the function of a place is more than its shape."
+    ];
+    this.log(thoughts[Math.floor(Math.random() * thoughts.length)]);
   },
   save() {
     localStorage.setItem("stage4_brain", JSON.stringify(this.memory));
@@ -167,26 +187,28 @@ function renderWorld() {
   }
 }
 
+let frameCount = 0;
 function loop() {
-  if (simulationRunning) brain.act();
+  if (simulationRunning) brain.act(frameCount);
   updateWorld();
   renderWorld();
+  frameCount++;
   requestAnimationFrame(loop);
 }
 
-// Provide knowledge manually (press `/`)
+// Teach the child manually with `/`
 document.addEventListener("keydown", e => {
   if (e.key === "/") {
-    const input = prompt("Provide a resource name (e.g. structure_basics):");
-    if (input) {
-      const value = prompt("What should I learn from this?");
-      if (value) brain.receiveResource(input.trim(), value.trim());
+    const resource = prompt("Provide resource name (e.g. structure_basics):");
+    const data = prompt("What should I learn from this?");
+    if (resource && data) {
+      brain.receiveResource(resource.trim(), data.trim());
     }
   }
 });
 
 brain.load();
-brain.log("I’ve entered Stage 4. I now seek to create structured meaning.");
+brain.log("I continue in Stage 4. I will keep building, naming, and learning.");
 loop();
 </script>
 
