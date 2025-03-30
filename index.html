@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Self-Growing Simulation</title>
+  <style>
+    body {
+      margin: 0;
+      background: #111;
+      color: #fff;
+      font-family: monospace;
+    }
+    canvas {
+      display: block;
+      background: #000;
+      margin: 0 auto;
+    }
+    #controls {
+      padding: 10px;
+      text-align: center;
+      background: #1c1c1c;
+    }
+    .action-button {
+      background: #333;
+      border: 1px solid #666;
+      color: #fff;
+      padding: 6px 12px;
+      margin: 5px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="world" width="800" height="400"></canvas>
+<div id="controls">
+  <button class="action-button" onclick="toggleSimulation()">
+    Start Simulation
+  </button>
+</div>
+
+<script>
+  const canvas = document.getElementById('world');
+  const ctx = canvas.getContext('2d');
+  const controls = document.getElementById('controls');
+
+  let objects = [];
+  let mechanics = [];
+  let simulationRunning = false;
+
+  // Restore from localStorage if exists
+  function loadState() {
+    const savedObjects = localStorage.getItem('sim_objects');
+    const savedMechanics = localStorage.getItem('sim_mechanics');
+    if (savedObjects) objects = JSON.parse(savedObjects);
+    if (savedMechanics) {
+      mechanics = JSON.parse(savedMechanics);
+      mechanics.forEach(addButtonFromMechanic);
+    }
+  }
+
+  function saveState() {
+    localStorage.setItem('sim_objects', JSON.stringify(objects));
+    localStorage.setItem('sim_mechanics', JSON.stringify(mechanics));
+  }
+
+  // Create random object
+  function spawnObject() {
+    const obj = {
+      id: Date.now() + Math.floor(Math.random() * 1000),
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      color: `hsl(${Math.floor(Math.random() * 360)}, 100%, 60%)`,
+      radius: 5 + Math.random() * 10,
+      dx: 0,
+      dy: 0
+    };
+    objects.push(obj);
+    saveState();
+  }
+
+  // Try to discover a new mechanic
+  function tryNewMechanic() {
+    const types = ['grow', 'bounce', 'changeColor'];
+    const chosen = types[Math.floor(Math.random() * types.length)];
+
+    if (mechanics.find(m => m.type === chosen)) return;
+
+    const newMech = { id: Date.now(), type: chosen };
+    mechanics.push(newMech);
+    saveState();
+    addButtonFromMechanic(newMech);
+  }
+
+  function addButtonFromMechanic(mech) {
+    const btn = document.createElement('button');
+    btn.className = 'action-button';
+    btn.textContent = `Use ${mech.type}`;
+    btn.onclick = () => applyMechanic(mech.type);
+    controls.appendChild(btn);
+  }
+
+  // What each mechanic does
+  function applyMechanic(type) {
+    switch (type) {
+      case 'grow':
+        objects.forEach(obj => obj.radius *= 1.1);
+        break;
+      case 'bounce':
+        objects.forEach(obj => {
+          obj.dx = (Math.random() - 0.5) * 2;
+          obj.dy = (Math.random() - 0.5) * 2;
+        });
+        break;
+      case 'changeColor':
+        objects.forEach(obj => {
+          obj.color = `hsl(${Math.floor(Math.random() * 360)}, 100%, 60%)`;
+        });
+        break;
+    }
+    saveState();
+  }
+
+  function update() {
+    objects.forEach(obj => {
+      obj.x += obj.dx;
+      obj.y += obj.dy;
+
+      // Bounce off walls
+      if (obj.x < 0 || obj.x > canvas.width) obj.dx *= -1;
+      if (obj.y < 0 || obj.y > canvas.height) obj.dy *= -1;
+    });
+  }
+
+  function render() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    objects.forEach(obj => {
+      ctx.fillStyle = obj.color;
+      ctx.beginPath();
+      ctx.arc(obj.x, obj.y, obj.radius, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
+
+  function loop() {
+    if (simulationRunning) {
+      if (Math.random() < 0.02) spawnObject();
+      if (Math.random() < 0.01) tryNewMechanic();
+    }
+    update();
+    render();
+    requestAnimationFrame(loop);
+  }
+
+  function toggleSimulation() {
+    simulationRunning = !simulationRunning;
+    const btn = controls.querySelector('button');
+    btn.textContent = simulationRunning ? "Stop Simulation" : "Start Simulation";
+    saveState();
+  }
+
+  loadState();
+  loop();
+</script>
+
+</body>
+</html>
