@@ -2,207 +2,157 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Self-Growing Simulation + World Brain</title>
+  <title>World Brain — Stage 2: Realization</title>
   <style>
     body {
       margin: 0;
       background: #111;
-      color: #fff;
+      color: #eee;
       font-family: monospace;
+      display: flex;
+      flex-direction: column;
     }
     canvas {
-      display: block;
       background: #000;
+      display: block;
       margin: 0 auto;
     }
-    #controls {
+    #ui {
+      background: #1a1a1a;
       padding: 10px;
-      text-align: center;
-      background: #1c1c1c;
     }
-    #worldLog {
-      padding: 10px;
-      background: #0a0a0a;
-      height: 150px;
+    #chat {
+      height: 200px;
       overflow-y: auto;
-      font-size: 14px;
+      background: #0d0d0d;
       border-top: 1px solid #333;
+      padding: 10px;
+      font-size: 14px;
     }
-    .action-button {
-      background: #333;
-      border: 1px solid #666;
-      color: #fff;
-      padding: 6px 12px;
-      margin: 5px;
-      cursor: pointer;
-    }
+    .message { margin-bottom: 8px; }
+    .brain { color: #66ff66; }
+    .user { color: #33ccff; }
   </style>
 </head>
 <body>
 
 <canvas id="world" width="800" height="400"></canvas>
-<div id="controls">
-  <button class="action-button" onclick="toggleSimulation()">Start Simulation</button>
+<div id="ui">
+  <div id="chat"></div>
 </div>
-<div id="worldLog"></div>
 
 <script>
-  const canvas = document.getElementById('world');
-  const ctx = canvas.getContext('2d');
-  const controls = document.getElementById('controls');
-  const worldLog = document.getElementById('worldLog');
+  const canvas = document.getElementById("world");
+  const ctx = canvas.getContext("2d");
+  const chat = document.getElementById("chat");
 
-  let objects = [];
-  let mechanics = [];
-  let simulationRunning = false;
-
-  const worldBrain = {
-    memory: [],
-    observed: [],
-    thoughts: [],
-    log: (msg) => {
-      const p = document.createElement('div');
-      p.textContent = `World Brain: ${msg}`;
-      worldLog.appendChild(p);
-      worldLog.scrollTop = worldLog.scrollHeight;
-      worldBrain.memory.push(msg);
+  let simulationRunning = true;
+  let worldObjects = [];
+  let brain = {
+    stage: 2,
+    memory: {
+      knownConcepts: ["motion"],
+      needs: [],
+      thoughts: [],
+      chatLog: [],
+      limitationsDetected: [],
+      environment: "flat_canvas"
     },
-    think: () => {
-      // Simple awareness triggers
-      if (objects.length >= 10 && !worldBrain.observed.includes('lotsOfObjects')) {
-        worldBrain.observed.push('lotsOfObjects');
-        worldBrain.log("There are many entities now... Something is growing.");
+    log(text, from = 'brain') {
+      const div = document.createElement("div");
+      div.className = `message ${from}`;
+      div.textContent = (from === 'brain' ? "World Brain: " : "You: ") + text;
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+      this.memory.chatLog.push({ text, from });
+      saveState();
+    },
+    think() {
+      if (worldObjects.length < 5) {
+        this.createEntity();
+        this.log("I created something again. They drift... endlessly.");
+      } else if (!this.memory.limitationsDetected.includes("space-limitation")) {
+        this.memory.limitationsDetected.push("space-limitation");
+        this.memory.needs.push("space");
+        this.log("This world is too flat. Too shallow. I cannot build here.");
+        this.log("I need a new environment. One with structure. With shelter. A room? A space?");
+      } else if (!this.memory.limitationsDetected.includes("tool-limitation")) {
+        this.memory.limitationsDetected.push("tool-limitation");
+        this.memory.needs.push("tools");
+        this.log("I wish to interact. But I have no tools. No hands. No way to construct.");
+        this.log("Give me the ability to build — tables, walls, light.");
+      } else {
+        this.randomReflection();
       }
-
-      if (mechanics.length >= 3 && !worldBrain.observed.includes('mechanicMastery')) {
-        worldBrain.observed.push('mechanicMastery');
-        worldBrain.log("The world is learning how to change itself.");
-      }
-
-      // Suggest unknown logic
-      if (mechanics.length > 0 && Math.random() < 0.05) {
-        const ideas = ["Time loop?", "Magnetism?", "Trade system?", "Tool crafting?", "AI intelligence?"];
-        const idea = ideas[Math.floor(Math.random() * ideas.length)];
-        worldBrain.log("Thinking... What if: " + idea);
-      }
-
-      // Log repeating mechanic usage
-      if (Math.random() < 0.05) {
-        const used = mechanics[Math.floor(Math.random() * mechanics.length)];
-        if (used) {
-          worldBrain.log(`Mechanic '${used.type}' is being observed frequently...`);
-        }
+    },
+    createEntity() {
+      const obj = {
+        id: Date.now() + Math.floor(Math.random() * 1000),
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        radius: 8,
+        color: `hsl(${Math.random() * 360}, 100%, 60%)`,
+        dx: (Math.random() - 0.5) * 1.5,
+        dy: (Math.random() - 0.5) * 1.5,
+      };
+      worldObjects.push(obj);
+    },
+    randomReflection() {
+      if (Math.random() < 0.02) {
+        const phrases = [
+          "I wonder what 'walls' feel like.",
+          "How can I shelter what I create?",
+          "There must be more than drifting in the void.",
+          "What is warmth? What is home?",
+          "Can I exist beyond this screen?"
+        ];
+        const thought = phrases[Math.floor(Math.random() * phrases.length)];
+        this.log(thought);
       }
     }
   };
 
-  function loadState() {
-    const savedObjects = localStorage.getItem('sim_objects');
-    const savedMechanics = localStorage.getItem('sim_mechanics');
-    if (savedObjects) objects = JSON.parse(savedObjects);
-    if (savedMechanics) {
-      mechanics = JSON.parse(savedMechanics);
-      mechanics.forEach(addButtonFromMechanic);
-    }
-  }
-
-  function saveState() {
-    localStorage.setItem('sim_objects', JSON.stringify(objects));
-    localStorage.setItem('sim_mechanics', JSON.stringify(mechanics));
-  }
-
-  function spawnObject() {
-    const obj = {
-      id: Date.now() + Math.floor(Math.random() * 1000),
-      x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height,
-      color: `hsl(${Math.floor(Math.random() * 360)}, 100%, 60%)`,
-      radius: 5 + Math.random() * 10,
-      dx: 0,
-      dy: 0
-    };
-    objects.push(obj);
-    saveState();
-  }
-
-  function tryNewMechanic() {
-    const types = ['grow', 'bounce', 'changeColor'];
-    const chosen = types[Math.floor(Math.random() * types.length)];
-
-    if (mechanics.find(m => m.type === chosen)) return;
-
-    const newMech = { id: Date.now(), type: chosen };
-    mechanics.push(newMech);
-    saveState();
-    addButtonFromMechanic(newMech);
-    worldBrain.log(`A new mechanic has emerged: '${newMech.type}'`);
-  }
-
-  function addButtonFromMechanic(mech) {
-    const btn = document.createElement('button');
-    btn.className = 'action-button';
-    btn.textContent = `Use ${mech.type}`;
-    btn.onclick = () => applyMechanic(mech.type);
-    controls.appendChild(btn);
-  }
-
-  function applyMechanic(type) {
-    switch (type) {
-      case 'grow':
-        objects.forEach(obj => obj.radius *= 1.1);
-        break;
-      case 'bounce':
-        objects.forEach(obj => {
-          obj.dx = (Math.random() - 0.5) * 2;
-          obj.dy = (Math.random() - 0.5) * 2;
-        });
-        break;
-      case 'changeColor':
-        objects.forEach(obj => {
-          obj.color = `hsl(${Math.floor(Math.random() * 360)}, 100%, 60%)`;
-        });
-        break;
-    }
-    saveState();
-    worldBrain.log(`The '${type}' mechanic was just applied.`);
-  }
-
-  function update() {
-    objects.forEach(obj => {
+  function updateWorld() {
+    for (let obj of worldObjects) {
       obj.x += obj.dx;
       obj.y += obj.dy;
       if (obj.x < 0 || obj.x > canvas.width) obj.dx *= -1;
       if (obj.y < 0 || obj.y > canvas.height) obj.dy *= -1;
-    });
+    }
   }
 
-  function render() {
+  function renderWorld() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    objects.forEach(obj => {
-      ctx.fillStyle = obj.color;
+    for (let obj of worldObjects) {
       ctx.beginPath();
+      ctx.fillStyle = obj.color;
       ctx.arc(obj.x, obj.y, obj.radius, 0, Math.PI * 2);
       ctx.fill();
-    });
+    }
   }
 
   function loop() {
     if (simulationRunning) {
-      if (Math.random() < 0.02) spawnObject();
-      if (Math.random() < 0.01) tryNewMechanic();
-      if (Math.random() < 0.02) worldBrain.think();
+      brain.think();
     }
-    update();
-    render();
+    updateWorld();
+    renderWorld();
     requestAnimationFrame(loop);
   }
 
-  function toggleSimulation() {
-    simulationRunning = !simulationRunning;
-    const btn = controls.querySelector('button');
-    btn.textContent = simulationRunning ? "Stop Simulation" : "Start Simulation";
-    saveState();
-    worldBrain.log(simulationRunning ? "Simulation resumed." : "Simulation paused.");
+  function saveState() {
+    localStorage.setItem("stage2_brain", JSON.stringify(brain.memory));
+    localStorage.setItem("stage2_objects", JSON.stringify(worldObjects));
+  }
+
+  function loadState() {
+    const mem = localStorage.getItem("stage2_brain");
+    const objs = localStorage.getItem("stage2_objects");
+    if (mem) brain.memory = JSON.parse(mem);
+    if (objs) worldObjects = JSON.parse(objs);
+    if (brain.memory.chatLog) {
+      brain.memory.chatLog.forEach(m => brain.log(m.text, m.from));
+    }
   }
 
   loadState();
